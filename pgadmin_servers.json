@@ -1,0 +1,18 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "IMDB Postgres",
+      "Group": "Servers",
+      "Host": "db", 
+      "Port": 5432,
+      "MaintenanceDB": "imdb",
+      "Username": "imdbuser",
+      "Password": "imdbpass",
+      "SSLMode": "prefer",
+      "SavePassword": true,
+      "Shared": false,
+      "PassFile": "",
+      "Tunnel": false
+    }
+  }
+}
