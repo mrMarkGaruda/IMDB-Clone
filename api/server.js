@@ -34,15 +34,15 @@ pool.connect((err, client, release) => {
 app.get('/api/featured_movies', async (req, res) => {
     try {
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear as year, tb.genres,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear" as year, tb."genres",
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.titletype = 'movie' 
-                AND tr.averagerating >= 8.0 
-                AND tr.numvotes >= 100000
-            ORDER BY tr.averagerating DESC, tr.numvotes DESC
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."titleType" = 'movie' 
+                AND tr."averageRating" >= 8.0 
+                AND tr."numVotes" >= 100000
+            ORDER BY tr."averageRating" DESC, tr."numVotes" DESC
             LIMIT 12
         `;
         const result = await pool.query(query);
@@ -57,22 +57,22 @@ app.get('/api/featured_movies', async (req, res) => {
 app.get('/api/featured_series', async (req, res) => {
     try {
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear, tb.endyear, tb.genres,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear", tb."endYear", tb."genres",
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.titletype IN ('tvSeries', 'tvMiniSeries') 
-                AND tr.averagerating >= 8.0 
-                AND tr.numvotes >= 10000
-            ORDER BY tr.averagerating DESC, tr.numvotes DESC
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."titleType" IN ('tvSeries', 'tvMiniSeries') 
+                AND tr."averageRating" >= 8.0 
+                AND tr."numVotes" >= 10000
+            ORDER BY tr."averageRating" DESC, tr."numVotes" DESC
             LIMIT 12
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
             ...row,
-            startYear: row.startyear,
-            endYear: row.endyear
+            startYear: row.startYear,
+            endYear: row.endYear
         })));
     } catch (err) {
         console.error('Error fetching featured series:', err);
@@ -84,15 +84,15 @@ app.get('/api/featured_series', async (req, res) => {
 app.get('/api/top_rated', async (req, res) => {
     try {
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear as year, tb.titletype as type,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear" as year, tb."titleType" as type,
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.titletype IN ('movie', 'tvSeries', 'tvMiniSeries') 
-                AND tr.averagerating >= 8.5 
-                AND tr.numvotes >= 50000
-            ORDER BY tr.averagerating DESC, tr.numvotes DESC
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."titleType" IN ('movie', 'tvSeries', 'tvMiniSeries') 
+                AND tr."averageRating" >= 8.5 
+                AND tr."numVotes" >= 50000
+            ORDER BY tr."averageRating" DESC, tr."numVotes" DESC
             LIMIT 20
         `;
         const result = await pool.query(query);
@@ -107,22 +107,22 @@ app.get('/api/top_rated', async (req, res) => {
 app.get('/api/movies_list', async (req, res) => {
     try {
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear as year, tb.runtimeminutes as runtime,
-                   tb.genres, tb.isadult,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear" as year, tb."runtimeMinutes" as runtime,
+                   tb."genres", tb."isAdult",
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.titletype = 'movie' 
-                AND tb.startyear IS NOT NULL
-                AND tr.numvotes >= 1000
-            ORDER BY tr.numvotes DESC, tr.averagerating DESC
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."titleType" = 'movie' 
+                AND tb."startYear" IS NOT NULL
+                AND tr."numVotes" >= 1000
+            ORDER BY tr."numVotes" DESC, tr."averageRating" DESC
             LIMIT 100
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
             ...row,
-            isAdult: row.isadult === '1'
+            isAdult: row.isAdult === true
         })));
     } catch (err) {
         console.error('Error fetching movies list:', err);
@@ -134,22 +134,22 @@ app.get('/api/movies_list', async (req, res) => {
 app.get('/api/series_list', async (req, res) => {
     try {
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear, tb.endyear, tb.genres,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear", tb."endYear", tb."genres",
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.titletype IN ('tvSeries', 'tvMiniSeries') 
-                AND tb.startyear IS NOT NULL
-                AND tr.numvotes >= 1000
-            ORDER BY tr.numvotes DESC, tr.averagerating DESC
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."titleType" IN ('tvSeries', 'tvMiniSeries') 
+                AND tb."startYear" IS NOT NULL
+                AND tr."numVotes" >= 1000
+            ORDER BY tr."numVotes" DESC, tr."averageRating" DESC
             LIMIT 100
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
             ...row,
-            startYear: row.startyear,
-            endYear: row.endyear
+            startYear: row.startYear,
+            endYear: row.endYear
         })));
     } catch (err) {
         console.error('Error fetching series list:', err);
@@ -161,18 +161,18 @@ app.get('/api/series_list', async (req, res) => {
 app.get('/api/people_list', async (req, res) => {
     try {
         const query = `
-            SELECT nb.nconst as id, nb.primaryname as name, 
-                   nb.birthyear, nb.deathyear, nb.primaryprofession as profession
+            SELECT nb."nconst" as id, nb."primaryName" as name, 
+                   nb."birthYear", nb."deathYear", nb."primaryProfession" as profession
             FROM name_basics nb
-            WHERE nb.primaryprofession IS NOT NULL
-            ORDER BY nb.primaryname
+            WHERE nb."primaryProfession" IS NOT NULL
+            ORDER BY nb."primaryName"
             LIMIT 100
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
             ...row,
-            birthYear: row.birthyear,
-            deathYear: row.deathyear
+            birthYear: row.birthYear,
+            deathYear: row.deathYear
         })));
     } catch (err) {
         console.error('Error fetching people list:', err);
@@ -189,28 +189,27 @@ app.get('/api/search', async (req, res) => {
         }
 
         const searchTerm = `%${q.toLowerCase()}%`;
-        
-        // Search titles
+          // Search titles
         const titleQuery = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear as year, tb.titletype,
-                   tr.averagerating as rating, 'title' as type
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear" as year, tb."titleType",
+                   tr."averageRating" as rating, 'title' as type
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE LOWER(tb.primarytitle) LIKE $1
-                AND tb.titletype IN ('movie', 'tvSeries', 'tvMiniSeries')
-            ORDER BY tr.numvotes DESC NULLS LAST
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE LOWER(tb."primaryTitle") LIKE $1
+                AND tb."titleType" IN ('movie', 'tvSeries', 'tvMiniSeries')
+            ORDER BY tr."numVotes" DESC NULLS LAST
             LIMIT 20
         `;
         
         // Search people
         const peopleQuery = `
-            SELECT nb.nconst as id, nb.primaryname as name, 
-                   nb.birthyear, nb.deathyear, nb.primaryprofession as profession,
+            SELECT nb."nconst" as id, nb."primaryName" as name, 
+                   nb."birthYear", nb."deathYear", nb."primaryProfession" as profession,
                    'person' as type
             FROM name_basics nb
-            WHERE LOWER(nb.primaryname) LIKE $1
-            ORDER BY nb.primaryname
+            WHERE LOWER(nb."primaryName") LIKE $1
+            ORDER BY nb."primaryName"
             LIMIT 20
         `;
         
@@ -222,14 +221,14 @@ app.get('/api/search', async (req, res) => {
         const results = [
             ...titleResults.rows.map(row => ({
                 ...row,
-                titleType: row.titletype,
-                birthYear: row.birthyear,
-                deathYear: row.deathyear
+                titleType: row.titleType,
+                birthYear: row.birthYear,
+                deathYear: row.deathYear
             })),
             ...peopleResults.rows.map(row => ({
                 ...row,
-                birthYear: row.birthyear,
-                deathYear: row.deathyear
+                birthYear: row.birthYear,
+                deathYear: row.deathYear
             }))
         ];
         
@@ -245,13 +244,13 @@ app.get('/api/movie_details/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const query = `
-            SELECT tb.tconst as id, tb.primarytitle as title, 
-                   tb.startyear as year, tb.runtimeminutes as runtime,
-                   tb.genres,
-                   tr.averagerating as rating, tr.numvotes as votes
+            SELECT tb."tconst" as id, tb."primaryTitle" as title, 
+                   tb."startYear" as year, tb."runtimeMinutes" as runtime,
+                   tb."genres",
+                   tr."averageRating" as rating, tr."numVotes" as votes
             FROM title_basics tb
-            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.tconst = $1
+            LEFT JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."tconst" = $1
         `;
         const result = await pool.query(query, [id]);
         
@@ -271,12 +270,12 @@ app.get('/api/movie_cast_crew/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const query = `
-            SELECT nb.nconst as id, nb.primaryname as name, 
-                   tp.category, tp.characters, tp.job
+            SELECT nb."nconst" as id, nb."primaryName" as name, 
+                   tp."category", tp."characters", tp."job"
             FROM title_principals tp
-            JOIN name_basics nb ON tp.nconst = nb.nconst
-            WHERE tp.tconst = $1
-            ORDER BY tp.ordering
+            JOIN name_basics nb ON tp."nconst" = nb."nconst"
+            WHERE tp."tconst" = $1
+            ORDER BY tp."ordering"
             LIMIT 20
         `;
         const result = await pool.query(query, [id]);
@@ -291,16 +290,16 @@ app.get('/api/movie_cast_crew/:id', async (req, res) => {
 app.get('/api/rating_trends', async (req, res) => {
     try {
         const query = `
-            SELECT tb.startyear as year, 
-                   AVG(tr.averagerating) as avgrating,
+            SELECT tb."startYear" as year, 
+                   AVG(tr."averageRating") as avgrating,
                    COUNT(*) as count
             FROM title_basics tb
-            JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.startyear BETWEEN 2000 AND 2023
-                AND tb.titletype IN ('movie', 'tvSeries')
-                AND tr.numvotes >= 1000
-            GROUP BY tb.startyear
-            ORDER BY tb.startyear
+            JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."startYear" BETWEEN 2000 AND 2023
+                AND tb."titleType" IN ('movie', 'tvSeries')
+                AND tr."numVotes" >= 1000
+            GROUP BY tb."startYear"
+            ORDER BY tb."startYear"
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
@@ -318,12 +317,12 @@ app.get('/api/genre_analysis', async (req, res) => {
         const query = `
             SELECT genre, COUNT(*) as count
             FROM (
-                SELECT unnest(string_to_array(tb.genres, ',')) as genre
+                SELECT unnest(string_to_array(tb."genres", ',')) as genre
                 FROM title_basics tb
-                JOIN title_ratings tr ON tb.tconst = tr.tconst
-                WHERE tb.titletype IN ('movie', 'tvSeries')
-                    AND tb.genres IS NOT NULL
-                    AND tr.numvotes >= 1000
+                JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+                WHERE tb."titleType" IN ('movie', 'tvSeries')
+                    AND tb."genres" IS NOT NULL
+                    AND tr."numVotes" >= 1000
             ) genre_list
             WHERE genre != ''
             GROUP BY genre
@@ -344,14 +343,14 @@ app.get('/api/genre_analysis', async (req, res) => {
 app.get('/api/year_analysis', async (req, res) => {
     try {
         const query = `
-            SELECT tb.startyear as year, COUNT(*) as count
+            SELECT tb."startYear" as year, COUNT(*) as count
             FROM title_basics tb
-            JOIN title_ratings tr ON tb.tconst = tr.tconst
-            WHERE tb.startyear BETWEEN 2010 AND 2023
-                AND tb.titletype IN ('movie', 'tvSeries')
-                AND tr.numvotes >= 1000
-            GROUP BY tb.startyear
-            ORDER BY tb.startyear DESC
+            JOIN title_ratings tr ON tb."tconst" = tr."tconst"
+            WHERE tb."startYear" BETWEEN 2010 AND 2023
+                AND tb."titleType" IN ('movie', 'tvSeries')
+                AND tr."numVotes" >= 1000
+            GROUP BY tb."startYear"
+            ORDER BY tb."startYear" DESC
         `;
         const result = await pool.query(query);
         res.json(result.rows.map(row => ({
