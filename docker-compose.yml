@@ -12,6 +12,7 @@ services:
     volumes:
       - ./schema:/docker-entrypoint-initdb.d
       - ./dataset:/dataset
+      - ./import:/import
 
   frontend:
     build: ./frontend

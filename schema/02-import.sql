@@ -1,23 +1,58 @@
--- Import IMDB dataset files
--- This script imports all .tsv.gz files from the dataset directory
+-- Import IMDB dataset files with progress indicators
+-- This script imports all .tsv.gz files with enhanced logging
 
--- Import name.basics (people information)
+\echo '🚀 Starting IMDB Data Import...'
+\echo '================================================'
+
+\echo '📂 Importing name.basics (people information)...'
+\timing on
 \COPY name_basics FROM PROGRAM 'gunzip -c /dataset/name.basics.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ name_basics import completed!'
 
--- Import title.basics (movie/TV show information)
+\echo '📂 Importing title.basics (movie/TV show information)...'
 \COPY title_basics FROM PROGRAM 'gunzip -c /dataset/title.basics.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_basics import completed!'
 
--- Import title.akas (alternative titles)
+\echo '📂 Importing title.akas (alternative titles)...'
 \COPY title_akas FROM PROGRAM 'gunzip -c /dataset/title.akas.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_akas import completed!'
 
--- Import title.crew (directors and writers)
+\echo '📂 Importing title.crew (directors and writers)...'
 \COPY title_crew FROM PROGRAM 'gunzip -c /dataset/title.crew.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_crew import completed!'
 
--- Import title.episode (TV episode information)
+\echo '📂 Importing title.episode (TV episode information)...'
 \COPY title_episode FROM PROGRAM 'gunzip -c /dataset/title.episode.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_episode import completed!'
 
--- Import title.principals (cast and crew)
+\echo '📂 Importing title.principals (cast and crew)...'
 \COPY title_principals FROM PROGRAM 'gunzip -c /dataset/title.principals.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_principals import completed!'
 
--- Import title.ratings (ratings information)
+\echo '📂 Importing title.ratings (ratings information)...'
 \COPY title_ratings FROM PROGRAM 'gunzip -c /dataset/title.ratings.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
+\echo '✅ title_ratings import completed!'
+
+\timing off
+
+\echo '================================================'
+\echo '🎉 IMDB Database Import Complete!'
+\echo '📊 Generating Statistics...'
+
+\echo 'Table Statistics:'
+SELECT 'name_basics' as table_name, COUNT(*) as records FROM name_basics
+UNION ALL
+SELECT 'title_basics', COUNT(*) FROM title_basics
+UNION ALL
+SELECT 'title_akas', COUNT(*) FROM title_akas
+UNION ALL
+SELECT 'title_crew', COUNT(*) FROM title_crew
+UNION ALL
+SELECT 'title_episode', COUNT(*) FROM title_episode
+UNION ALL
+SELECT 'title_principals', COUNT(*) FROM title_principals
+UNION ALL
+SELECT 'title_ratings', COUNT(*) FROM title_ratings
+ORDER BY records DESC;
+
+\echo '🔥 IMDB Database Ready for Use!'

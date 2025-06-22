@@ -1,7 +1,7 @@
 // Database manager for IMDB Clone frontend
 class DatabaseManager {
     constructor() {
-        this.apiBaseUrl = 'http://localhost:3001/api';
+        this.apiBaseUrl = '/api';
     }
 
     async executeQuery(queryType, params = []) {
