@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People - IMDB Clone</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1><a href="index.html">IMDB Clone</a></h1>
+            </div>            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="movies.html" class="nav-link">Movies</a></li>
+                <li><a href="series.html" class="nav-link">TV Series</a></li>
+                <li><a href="people.html" class="nav-link active">People</a></li>
+                <li><a href="search.html" class="nav-link">Search</a></li>
+                <li><a href="analysis.html" class="nav-link">Analysis</a></li>
+            </ul>
+            <div class="search-box">
+                <input type="text" id="quickSearch" placeholder="Quick search...">
+                <button onclick="performQuickSearch()">🔍</button>
+            </div>
+        </nav>
+    </header>    <main class="main-content">
+        <h2>People</h2>
+        
+        <div id="peopleList" class="people-grid">
+            <!-- People will be loaded here -->
+        </div>
+    </main>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="birthYearFrom">Birth Year From</label>
+                        <input type="number" id="birthYearFrom" placeholder="e.g., 1950" min="1800" max="2025">
+                    </div>
+                    <div class="form-group">
+                        <label for="birthYearTo">Birth Year To</label>
+                        <input type="number" id="birthYearTo" placeholder="e.g., 1990" min="1800" max="2025">
+                    </div>
+                </div>
+                <div class="flex gap-1">
+                    <button type="submit" class="btn btn-primary">Search People</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearPeopleFilters()">Clear</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="results-info">
+            <p id="peopleResultsCount"></p>
+        </div>
+
+        <div id="peopleGrid" class="content-grid">
+            <!-- People will be loaded here -->
+        </div>
+
+        <!-- Popular People -->
+        <div class="featured-content">
+            <h3>Popular People</h3>
+            <div id="popularPeople" class="content-grid">
+                <!-- Popular people will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 IMDB Clone. Educational project.</p>
+    </footer>
+
+    <script src="js/database.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPopularPeople();
+        });
+
+        async function searchPeople() {
+            const name = document.getElementById('personName').value.trim();
+            const profession = document.getElementById('professionFilter').value;
+            const birthYearFrom = document.getElementById('birthYearFrom').value;
+            const birthYearTo = document.getElementById('birthYearTo').value;
+
+            const filters = {
+                name,
+                profession,
+                birthYearFrom,
+                birthYearTo
+            };
+
+            try {
+                showLoading('peopleGrid');
+                const people = await db.searchPeople(filters);
+                
+                if (people.length === 0) {
+                    document.getElementById('peopleGrid').innerHTML = '<div class="text-center">No people found</div>';
+                    document.getElementById('peopleResultsCount').textContent = '0 people found';
+                    return;
+                }
+
+                document.getElementById('peopleGrid').innerHTML = people.map(createPersonCard).join('');
+                document.getElementById('peopleResultsCount').textContent = `${people.length} people found`;
+                
+            } catch (error) {
+                console.error('Error searching people:', error);
+                showError('peopleGrid', 'Error searching people');
+            }
+        }
+
+        async function loadPopularPeople() {
+            try {
+                showLoading('popularPeople');
+                const people = await db.getPopularPeople();
+                document.getElementById('popularPeople').innerHTML = people.map(createPersonCard).join('');
+            } catch (error) {
+                console.error('Error loading popular people:', error);
+                showError('popularPeople', 'Error loading popular people');
+            }
+        }
+
+        function createPersonCard(person) {
+            const birthYear = person.birthYear ? ` (${person.birthYear}${person.deathYear ? `-${person.deathYear}` : ''})` : '';
+            return `
+                <div class="content-card" onclick="viewPersonDetails('${person.id}')">
+                    <img src="${person.photo || 'https://via.placeholder.com/200x300/666/fff?text=No+Photo'}" alt="${person.name}" onerror="this.src='https://via.placeholder.com/200x300/666/fff?text=No+Photo'">
+                    <div class="card-info">
+                        <div class="card-title">${person.name}${birthYear}</div>
+                        <div class="card-meta">${person.profession}</div>
+                        <div class="card-meta">Known for: ${person.knownFor ? person.knownFor.slice(0, 2).join(', ') : 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function viewPersonDetails(personId) {
+            window.location.href = `person-details.html?id=${personId}`;
+        }
+
+        function clearPeopleFilters() {
+            document.getElementById('personName').value = '';
+            document.getElementById('professionFilter').selectedIndex = 0;
+            document.getElementById('birthYearFrom').value = '';
+            document.getElementById('birthYearTo').value = '';
+            
+            document.getElementById('peopleGrid').innerHTML = '';
+            document.getElementById('peopleResultsCount').textContent = '';
+        }
+    </script>
+</body>
+</html>

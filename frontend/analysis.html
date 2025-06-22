@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Analysis - IMDB Clone</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1><a href="index.html">IMDB Clone</a></h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="movies.html" class="nav-link">Movies</a></li>
+                <li><a href="series.html" class="nav-link">TV Series</a></li>
+                <li><a href="people.html" class="nav-link">People</a></li>
+                <li><a href="search.html" class="nav-link">Search</a></li>
+                <li><a href="analysis.html" class="nav-link active">Analysis</a></li>
+            </ul>
+            <div class="search-box">
+                <input type="text" id="quickSearch" placeholder="Quick search...">
+                <button onclick="performQuickSearch()">🔍</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <h2>Data Analysis & Insights</h2>
+        
+        <!-- Rating Trends by Year -->
+        <div class="form-container">
+            <h3>Rating Trends by Year/Decade</h3>
+            <p>This chart shows how average movie/TV ratings have changed over time.</p>
+            <canvas id="ratingTrendsChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Rating Trends by Genre -->
+        <div class="form-container">
+            <h3>Average Ratings by Genre</h3>
+            <p>Comparison of average ratings across different genres.</p>
+            <canvas id="genreRatingsChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Top Directors -->
+        <div class="form-container">
+            <h3>Top Directors by Average Rating</h3>
+            <p>Directors with the highest average ratings for their movies.</p>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Director</th>
+                            <th>Average Rating</th>
+                            <th>Number of Movies</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topDirectorsTable">
+                        <!-- Directors data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Genre Popularity Over Time -->
+        <div class="form-container">
+            <h3>Genre Popularity Over Time</h3>
+            <p>How the popularity of different genres has evolved over the decades.</p>
+            <div class="form-group">
+                <label for="genreSelect">Select Genre</label>
+                <select id="genreSelect" onchange="updateGenreChart()">
+                    <option value="Drama">Drama</option>
+                    <option value="Comedy">Comedy</option>
+                    <option value="Action">Action</option>
+                    <option value="Thriller">Thriller</option>
+                    <option value="Horror">Horror</option>
+                    <option value="Romance">Romance</option>
+                </select>
+            </div>
+            <canvas id="genrePopularityChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- Collaboration Networks -->
+        <div class="form-container">
+            <h3>Collaboration Analysis</h3>
+            <p>Find the most frequent collaborations between actors and directors.</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="collaborationType">Collaboration Type</label>
+                    <select id="collaborationType">
+                        <option value="actor-director">Actor-Director</option>
+                        <option value="actor-actor">Actor-Actor</option>
+                        <option value="director-writer">Director-Writer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="minCollaborations">Minimum Collaborations</label>
+                    <input type="number" id="minCollaborations" value="3" min="1" max="20">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="analyzeCollaborations()">Analyze Collaborations</button>
+            
+            <div id="collaborationsResults" class="mt-1">
+                <!-- Collaboration results will appear here -->
+            </div>
+        </div>
+
+        <!-- Success Patterns -->
+        <div class="form-container">
+            <h3>Success Patterns Analysis</h3>
+            <p>Common elements in highly-rated content.</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ratingThreshold">Rating Threshold</label>
+                    <input type="number" id="ratingThreshold" value="8.0" min="5.0" max="10.0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="analysisType">Analysis Type</label>
+                    <select id="analysisType">
+                        <option value="genre-combinations">Genre Combinations</option>
+                        <option value="runtime-analysis">Runtime Analysis</option>
+                        <option value="release-patterns">Release Patterns</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="analyzeSuccessPatterns()">Analyze Patterns</button>
+            
+            <div id="successPatternsResults" class="mt-1">
+                <!-- Success patterns results will appear here -->
+            </div>
+        </div>
+
+        <!-- Custom Analysis -->
+        <div class="form-container">
+            <h3>Custom Analysis</h3>
+            <p>Perform custom data analysis queries.</p>
+            <div class="form-group">
+                <label for="customQuery">Custom Analysis Query</label>
+                <textarea id="customQuery" rows="4" placeholder="Enter your custom analysis description..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="performCustomAnalysis()">Run Analysis</button>
+            
+            <div id="customAnalysisResults" class="mt-1">
+                <!-- Custom analysis results will appear here -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 IMDB Clone. Educational project.</p>
+    </footer>
+
+    <script src="js/database.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/analysis.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAnalysis();
+        });
+    </script>
+</body>
+</html>

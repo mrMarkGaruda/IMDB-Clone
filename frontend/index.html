@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDB Clone - Home</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1><a href="index.html">IMDB Clone</a></h1>
+            </div>            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="movies.html" class="nav-link">Movies</a></li>
+                <li><a href="series.html" class="nav-link">TV Series</a></li>
+                <li><a href="people.html" class="nav-link">People</a></li>
+                <li><a href="search.html" class="nav-link">Search</a></li>
+                <li><a href="analysis.html" class="nav-link">Analysis</a></li>
+            </ul>
+            <div class="search-box">
+                <input type="text" id="quickSearch" placeholder="Quick search...">
+                <button onclick="performQuickSearch()">🔍</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <section class="hero">
+            <h2>Welcome to IMDB Clone</h2>
+            <p>Discover movies, TV shows, and celebrities</p>
+        </section>
+
+        <section class="featured-content">
+            <h3>Featured Movies</h3>
+            <div id="featuredMovies" class="content-grid">
+                <!-- Featured movies will be loaded here -->
+            </div>
+        </section>
+
+        <section class="featured-content">
+            <h3>Popular TV Series</h3>
+            <div id="featuredSeries" class="content-grid">
+                <!-- Featured series will be loaded here -->
+            </div>
+        </section>
+
+        <section class="featured-content">
+            <h3>Top Rated Content</h3>
+            <div id="topRated" class="content-grid">
+                <!-- Top rated content will be loaded here -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 IMDB Clone. Educational project.</p>
+    </footer>
+
+    <script src="js/database.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Load featured content on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFeaturedContent();
+        });
+    </script>
+</body>
+</html>

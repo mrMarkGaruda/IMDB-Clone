@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS name_basics (
 CREATE TABLE IF NOT EXISTS title_basics (
     tconst VARCHAR(10) PRIMARY KEY,
     titleType VARCHAR(50),
-    primaryTitle VARCHAR(500),
-    originalTitle VARCHAR(500),
+    primaryTitle VARCHAR(1000),
+    originalTitle VARCHAR(1000),
     isAdult BOOLEAN,
     startYear INTEGER,
     endYear INTEGER,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS title_episode (
 CREATE TABLE IF NOT EXISTS title_akas (
     titleId VARCHAR(10),
     ordering INTEGER,
-    title VARCHAR(500),
+    title VARCHAR(1000),
     region VARCHAR(10),
     language VARCHAR(10),
     types TEXT,
