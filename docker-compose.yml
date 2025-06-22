@@ -12,7 +12,24 @@ services:
     volumes:
       - ./schema:/docker-entrypoint-initdb.d
       - ./dataset:/dataset
-      - ./import:/import
+      - pgadmin_data:/var/lib/postgresql/data
+
+  # Separate import service - run manually with: docker-compose run --rm importer
+  importer:
+    build: ./import
+    container_name: imdb_importer
+    environment:
+      POSTGRES_USER: imdbuser
+      POSTGRES_PASSWORD: imdbpass
+      POSTGRES_DB: imdb
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    volumes:
+      - ./dataset:/dataset
+    depends_on:
+      - db
+    profiles:
+      - manual  # This prevents it from starting automatically
 
   frontend:
     build: ./frontend

@@ -1,58 +1,79 @@
--- Import IMDB dataset files with progress indicators
--- This script imports all .tsv.gz files with enhanced logging
+-- Schema creation only - import is handled by separate import container
+-- This file only creates the database schema and indexes
 
-\echo '🚀 Starting IMDB Data Import...'
-\echo '================================================'
+\echo 'Creating IMDB Database Schema...'
 
-\echo '📂 Importing name.basics (people information)...'
-\timing on
-\COPY name_basics FROM PROGRAM 'gunzip -c /dataset/name.basics.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ name_basics import completed!'
+-- Create tables for IMDB data
+CREATE TABLE IF NOT EXISTS name_basics (
+    nconst VARCHAR(20) PRIMARY KEY,
+    primaryName VARCHAR(500),
+    birthYear INTEGER,
+    deathYear INTEGER,
+    primaryProfession TEXT,
+    knownForTitles TEXT
+);
 
-\echo '📂 Importing title.basics (movie/TV show information)...'
-\COPY title_basics FROM PROGRAM 'gunzip -c /dataset/title.basics.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_basics import completed!'
+CREATE TABLE IF NOT EXISTS title_basics (
+    tconst VARCHAR(20) PRIMARY KEY,
+    titleType VARCHAR(50),
+    primaryTitle VARCHAR(1000),
+    originalTitle VARCHAR(1000),
+    isAdult BOOLEAN,
+    startYear INTEGER,
+    endYear INTEGER,
+    runtimeMinutes INTEGER,
+    genres VARCHAR(200)
+);
 
-\echo '📂 Importing title.akas (alternative titles)...'
-\COPY title_akas FROM PROGRAM 'gunzip -c /dataset/title.akas.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_akas import completed!'
+CREATE TABLE IF NOT EXISTS title_akas (
+    titleId VARCHAR(20),
+    ordering INTEGER,
+    title VARCHAR(1000),
+    region VARCHAR(10),
+    language VARCHAR(10),
+    types VARCHAR(100),
+    attributes TEXT,
+    isOriginalTitle BOOLEAN,
+    PRIMARY KEY (titleId, ordering)
+);
 
-\echo '📂 Importing title.crew (directors and writers)...'
-\COPY title_crew FROM PROGRAM 'gunzip -c /dataset/title.crew.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_crew import completed!'
+CREATE TABLE IF NOT EXISTS title_crew (
+    tconst VARCHAR(20) PRIMARY KEY,
+    directors TEXT,
+    writers TEXT
+);
 
-\echo '📂 Importing title.episode (TV episode information)...'
-\COPY title_episode FROM PROGRAM 'gunzip -c /dataset/title.episode.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_episode import completed!'
+CREATE TABLE IF NOT EXISTS title_episode (
+    tconst VARCHAR(20) PRIMARY KEY,
+    parentTconst VARCHAR(20),
+    seasonNumber INTEGER,
+    episodeNumber INTEGER
+);
 
-\echo '📂 Importing title.principals (cast and crew)...'
-\COPY title_principals FROM PROGRAM 'gunzip -c /dataset/title.principals.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_principals import completed!'
+CREATE TABLE IF NOT EXISTS title_principals (
+    tconst VARCHAR(20),
+    ordering INTEGER,
+    nconst VARCHAR(20),
+    category VARCHAR(50),
+    job VARCHAR(500),
+    characters TEXT,
+    PRIMARY KEY (tconst, ordering)
+);
 
-\echo '📂 Importing title.ratings (ratings information)...'
-\COPY title_ratings FROM PROGRAM 'gunzip -c /dataset/title.ratings.tsv.gz' WITH (FORMAT csv, DELIMITER E'\t', NULL '\N', HEADER, QUOTE E'\b');
-\echo '✅ title_ratings import completed!'
+CREATE TABLE IF NOT EXISTS title_ratings (
+    tconst VARCHAR(20) PRIMARY KEY,
+    averageRating DECIMAL(3,1),
+    numVotes INTEGER
+);
 
-\timing off
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_title_basics_title_type ON title_basics(titleType);
+CREATE INDEX IF NOT EXISTS idx_title_basics_start_year ON title_basics(startYear);
+CREATE INDEX IF NOT EXISTS idx_title_basics_genres ON title_basics USING gin(string_to_array(genres, ','));
+CREATE INDEX IF NOT EXISTS idx_title_ratings_rating ON title_ratings(averageRating);
+CREATE INDEX IF NOT EXISTS idx_title_principals_nconst ON title_principals(nconst);
+CREATE INDEX IF NOT EXISTS idx_title_principals_tconst ON title_principals(tconst);
+CREATE INDEX IF NOT EXISTS idx_name_basics_name ON name_basics(primaryName);
 
-\echo '================================================'
-\echo '🎉 IMDB Database Import Complete!'
-\echo '📊 Generating Statistics...'
-
-\echo 'Table Statistics:'
-SELECT 'name_basics' as table_name, COUNT(*) as records FROM name_basics
-UNION ALL
-SELECT 'title_basics', COUNT(*) FROM title_basics
-UNION ALL
-SELECT 'title_akas', COUNT(*) FROM title_akas
-UNION ALL
-SELECT 'title_crew', COUNT(*) FROM title_crew
-UNION ALL
-SELECT 'title_episode', COUNT(*) FROM title_episode
-UNION ALL
-SELECT 'title_principals', COUNT(*) FROM title_principals
-UNION ALL
-SELECT 'title_ratings', COUNT(*) FROM title_ratings
-ORDER BY records DESC;
-
-\echo '🔥 IMDB Database Ready for Use!'
+\echo 'Schema creation completed! Ready for data import.';
+\echo 'To import data, run: docker-compose run --rm importer';

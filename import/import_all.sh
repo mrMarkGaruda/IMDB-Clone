@@ -1,8 +1,16 @@
 #!/bin/bash
-# Import all .tsv.gz files in /dataset into tables with matching names with fancy progress bar
+# Import all .tsv.gz files in /dataset into tables with matching names with ASCII progress bar
 set -e
 
-# Colors for fancy output
+# Wait for database to be ready
+echo ">> Waiting for database connection..."
+until PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q' 2>/dev/null; do
+    echo ">> Database not ready, waiting 5 seconds..."
+    sleep 5
+done
+echo ">> Database connection established!"
+
+# Colors for fancy output (ASCII compatible)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -36,7 +44,7 @@ show_import_progress() {
         elapsed=$((current_time - start_time))
         
         # Get current row count
-        row_count=$(psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "0")
+        row_count=$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "0")
         
         # Show spinning indicator and stats
         spin="|/-\\"
@@ -129,7 +137,7 @@ for file in /dataset/*.tsv.gz; do
     progress_pid=$!
     
     # Run the actual import
-    if gunzip -c "$file" | psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\copy $table FROM STDIN WITH (FORMAT csv, DELIMITER E'\t', HEADER true, NULL '\\N')" >/dev/null 2>&1; then
+    if gunzip -c "$file" | PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\copy $table FROM STDIN WITH (FORMAT csv, DELIMITER E'\t', HEADER true, NULL '\\N')" >/dev/null 2>&1; then
         # Kill the progress monitor
         kill $progress_pid 2>/dev/null || true
         wait $progress_pid 2>/dev/null || true
@@ -139,7 +147,7 @@ for file in /dataset/*.tsv.gz; do
         duration=$((end_time - start_time))
         
         # Get final row count
-        row_count=$(psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "Unknown")
+        row_count=$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "Unknown")
         
         printf "\r${GREEN}>> SUCCESS! ${row_count} rows imported in ${duration}s${NC}\n"
         processed_size=$((processed_size + file_size))
@@ -161,7 +169,7 @@ echo -e "\n${PURPLE}>> Final Statistics:${NC}"
 for file in /dataset/*.tsv.gz; do
     [ -e "$file" ] || continue
     table=$(basename "$file" .tsv.gz | tr '.' '_')
-    count=$(psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "0")
+    count=$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM $table;" 2>/dev/null | tr -d ' ' | tr -d '\n' || echo "0")
     echo -e "${CYAN}${table}:${NC} ${GREEN}${count} rows${NC}"
 done
 
