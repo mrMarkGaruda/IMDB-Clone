@@ -12,18 +12,15 @@ Features:
 """
 
 import sqlite3
-import pandas as pd
-import gzip
-import os
 import time
-from datetime import datetime
-from pathlib import Path
-
+import gzip
+import pandas as pd
 import dash
-from dash import dcc, html, Input, Output, dash_table, callback
 import dash_bootstrap_components as dbc
 import plotly.express as px
-import plotly.graph_objects as go
+from datetime import datetime
+from pathlib import Path
+from dash import dcc, html, Input, Output, State, dash_table, callback, clientside_callback, ClientsideFunction
 from plotly.subplots import make_subplots
 
 class IMDBClone:
@@ -262,31 +259,35 @@ class IMDBClone:
         
         stats = {}
         for name, query in queries.items():
-            result = self.conn.execute(query).fetchone()
-            stats[name] = result[0] if result else 0
+            try:
+                result = self.conn.execute(query).fetchone()
+                stats[name] = result[0] if result else 0
+            except Exception as e:
+                print(f"Error getting stat {name}: {e}")
+                stats[name] = 0
         
         return stats
 
 def create_dashboard(imdb_clone):
     """Create the main dashboard application"""
-    
-    # Initialize Dash app with Bootstrap theme
-    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+      # Initialize Dash app with Bootstrap theme
+    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], assets_folder='assets')
     app.title = "IMDB Clone & Analytics"
     
     # Get initial stats
     stats = imdb_clone.get_quick_stats()
-    
-    # Define the layout
+      # Define the layout
     app.layout = dbc.Container([
-        dbc.Row([
+        dcc.Store(id='search-store'),  # Store for debounced search
+        dcc.Interval(id='interval-component', interval=1000, n_intervals=0, disabled=True),  # For loading states
+          dbc.Row([
             dbc.Col([
-                html.H1("🎬 IMDB Clone & Data Analytics", className="text-center mb-4"),
-                html.Hr()
+                html.H1("🎬 IMDB Clone & Data Analytics", 
+                       className="text-center mb-4 main-title"),
+                html.Hr(style={'border': '2px solid #e9ecef'})
             ])
         ]),
-        
-        # Stats Cards
+          # Stats Cards
         dbc.Row([
             dbc.Col([
                 dbc.Card([
@@ -294,7 +295,7 @@ def create_dashboard(imdb_clone):
                         html.H4(f"{stats['Total Movies']:,}", className="card-title text-primary"),
                         html.P("Movies", className="card-text")
                     ])
-                ])
+                ], style={'box-shadow': '0 4px 6px rgba(0,0,0,0.1)', 'border': '1px solid #e3f2fd'})
             ], width=3),
             dbc.Col([
                 dbc.Card([
@@ -302,7 +303,7 @@ def create_dashboard(imdb_clone):
                         html.H4(f"{stats['Total TV Series']:,}", className="card-title text-success"),
                         html.P("TV Series", className="card-text")
                     ])
-                ])
+                ], style={'box-shadow': '0 4px 6px rgba(0,0,0,0.1)', 'border': '1px solid #e8f5e8'})
             ], width=3),
             dbc.Col([
                 dbc.Card([
@@ -310,7 +311,7 @@ def create_dashboard(imdb_clone):
                         html.H4(f"{stats['Total People']:,}", className="card-title text-warning"),
                         html.P("People", className="card-text")
                     ])
-                ])
+                ], style={'box-shadow': '0 4px 6px rgba(0,0,0,0.1)', 'border': '1px solid #fff3cd'})
             ], width=3),
             dbc.Col([
                 dbc.Card([
@@ -318,22 +319,25 @@ def create_dashboard(imdb_clone):
                         html.H4(f"{stats['Total Ratings']:,}", className="card-title text-info"),
                         html.P("Rated Titles", className="card-text")
                     ])
-                ])
+                ], style={'box-shadow': '0 4px 6px rgba(0,0,0,0.1)', 'border': '1px solid #d1ecf1'})
             ], width=3)
         ], className="mb-4"),
-        
-        # Tabs for different sections
+          # Tabs for different sections
         dbc.Tabs([
-            dbc.Tab(label="🔍 Search & Browse", tab_id="search"),
-            dbc.Tab(label="📊 Analytics Dashboard", tab_id="analytics"),
-            dbc.Tab(label="🎭 People & Careers", tab_id="people"),
-            dbc.Tab(label="📈 Trends & Insights", tab_id="trends")
+            dbc.Tab(label="🔍 Search & Browse", tab_id="search", 
+                   tab_style={'padding': '10px', 'font-weight': 'bold'}),
+            dbc.Tab(label="📊 Analytics Dashboard", tab_id="analytics",
+                   tab_style={'padding': '10px', 'font-weight': 'bold'}),
+            dbc.Tab(label="🎭 People & Careers", tab_id="people",
+                   tab_style={'padding': '10px', 'font-weight': 'bold'}),
+            dbc.Tab(label="📈 Trends & Insights", tab_id="trends",
+                   tab_style={'padding': '10px', 'font-weight': 'bold'})
         ], id="tabs", active_tab="search"),
         
         html.Div(id="tab-content", className="mt-4")
-        
     ], fluid=True)
     
+    # Tab content callback
     @app.callback(Output("tab-content", "children"), Input("tabs", "active_tab"))
     def update_tab_content(active_tab):
         if active_tab == "search":
@@ -346,6 +350,167 @@ def create_dashboard(imdb_clone):
             return create_trends_tab(imdb_clone)
         return html.Div("Select a tab")
     
+    # Search callback with debouncing
+    @app.callback(
+        Output("search-results", "children"),
+        [Input("search-store", "data")],
+        prevent_initial_call=False
+    )
+    def update_search_results(search_data):
+        if not search_data or search_data.get('search_term', '').strip() == '':
+            # Return popular movies by default
+            try:
+                query = """
+                SELECT 
+                    tb.primaryTitle,
+                    tb.startYear,
+                    tb.titleType,
+                    tb.genres,
+                    tr.averageRating,
+                    tr.numVotes
+                FROM title_basics tb
+                JOIN title_ratings tr ON tb.tconst = tr.tconst
+                WHERE tb.titleType = 'movie' 
+                    AND tr.numVotes >= 50000
+                    AND tr.averageRating >= 7.0
+                ORDER BY tr.numVotes DESC
+                LIMIT 25
+                """
+                df = pd.read_sql_query(query, imdb_clone.conn)
+                
+                if not df.empty:
+                    return dash_table.DataTable(
+                        data=df.to_dict('records'),
+                        columns=[
+                            {"name": "Title", "id": "primaryTitle"},
+                            {"name": "Year", "id": "startYear"},
+                            {"name": "Type", "id": "titleType"},
+                            {"name": "Genres", "id": "genres"},
+                            {"name": "Rating", "id": "averageRating", "type": "numeric", "format": {"specifier": ".1f"}},
+                            {"name": "Votes", "id": "numVotes", "type": "numeric", "format": {"specifier": ","}}
+                        ],
+                        style_table={'overflowX': 'auto'},
+                        style_cell={'textAlign': 'left', 'padding': '8px'},
+                        style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
+                        page_size=25,
+                        sort_action="native",
+                        filter_action="native"
+                    )
+                else:
+                    return html.P("No popular movies found")
+            except Exception as e:
+                return dbc.Alert(f"Error loading popular movies: {str(e)}", color="warning")
+        
+        # Perform search
+        try:
+            search_term = search_data.get('search_term', '')
+            title_type = search_data.get('title_type', 'all')
+            year_range = search_data.get('year_range', [1990, 2024])
+            min_rating = search_data.get('min_rating', 0)
+            
+            # Build search query
+            conditions = []
+            params = []
+            
+            # Search term
+            conditions.append("(tb.primaryTitle LIKE ? OR tb.originalTitle LIKE ?)")
+            params.extend([f"%{search_term}%", f"%{search_term}%"])
+            
+            # Title type filter
+            if title_type != "all":
+                conditions.append("tb.titleType = ?")
+                params.append(title_type)
+            
+            # Year range
+            if year_range:
+                conditions.append("tb.startYear BETWEEN ? AND ?")
+                params.extend([year_range[0], year_range[1]])
+            
+            # Rating filter
+            if min_rating > 0:
+                conditions.append("tr.averageRating >= ?")
+                params.append(min_rating)
+            
+            where_clause = " AND ".join(conditions)
+            
+            query = f"""
+            SELECT 
+                tb.primaryTitle,
+                tb.startYear,
+                tb.titleType,
+                tb.genres,
+                tr.averageRating,
+                tr.numVotes
+            FROM title_basics tb
+            LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
+            WHERE {where_clause}
+            ORDER BY 
+                CASE WHEN tr.averageRating IS NOT NULL THEN tr.averageRating ELSE 0 END DESC,
+                CASE WHEN tr.numVotes IS NOT NULL THEN tr.numVotes ELSE 0 END DESC
+            LIMIT 50
+            """
+            
+            df = pd.read_sql_query(query, imdb_clone.conn, params=params)
+            
+            if not df.empty:
+                return dash_table.DataTable(
+                    data=df.to_dict('records'),
+                    columns=[
+                        {"name": "Title", "id": "primaryTitle"},
+                        {"name": "Year", "id": "startYear"},
+                        {"name": "Type", "id": "titleType"},
+                        {"name": "Genres", "id": "genres"},
+                        {"name": "Rating", "id": "averageRating", "type": "numeric", "format": {"specifier": ".1f"}},
+                        {"name": "Votes", "id": "numVotes", "type": "numeric", "format": {"specifier": ","}}
+                    ],
+                    style_table={'overflowX': 'auto'},
+                    style_cell={'textAlign': 'left', 'padding': '8px'},
+                    style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
+                    page_size=25,
+                    sort_action="native",
+                    filter_action="native"
+                )
+            else:
+                return dbc.Alert(f"No results found for '{search_term}'", color="info")
+                
+        except Exception as e:
+            return dbc.Alert(f"Search error: {str(e)}", color="danger")
+      # Debounced search trigger
+    @app.callback(
+        Output("search-store", "data"),
+        [Input("search-btn", "n_clicks"),
+         Input("search-input", "n_submit")],
+        [State("search-input", "value"),
+         State("type-filter", "value"),
+         State("year-range", "value"),
+         State("rating-filter", "value")],
+        prevent_initial_call=True
+    )
+    def trigger_search(n_clicks, n_submit, search_term, title_type, year_range, min_rating):
+        if (n_clicks or n_submit) and search_term and search_term.strip():
+            return {
+                'search_term': search_term.strip(),
+                'title_type': title_type or 'all',
+                'year_range': year_range or [1990, 2024],
+                'min_rating': min_rating or 0
+            }
+        return {}
+    
+    # Client-side callback for immediate UI feedback
+    app.clientside_callback(
+        """
+        function(n_clicks, n_submit) {
+            if (n_clicks || n_submit) {
+                return {'display': 'block'};
+            }
+            return {'display': 'none'};
+        }
+        """,
+        Output("loading-search", "style"),
+        [Input("search-btn", "n_clicks"),
+         Input("search-input", "n_submit")]
+    )
+    
     return app
 
 def create_search_tab(imdb_clone):
@@ -353,219 +518,234 @@ def create_search_tab(imdb_clone):
     return dbc.Container([
         dbc.Row([
             dbc.Col([
-                html.H3("🔍 Search Movies & TV Shows"),
-                dbc.InputGroup([
-                    dbc.Input(id="search-input", placeholder="Search titles...", type="text"),
-                    dbc.Button("Search", id="search-btn", color="primary")
-                ], className="mb-3"),
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H3("🔍 Search Movies & TV Shows", className="mb-3"),
+                        dbc.InputGroup([
+                            dbc.Input(id="search-input", placeholder="Search titles... (Press Enter or click Search)", type="text", value=""),
+                            dbc.Button("Search", id="search-btn", color="primary")
+                        ], className="mb-3"),
+                        
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label("Title Type:", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id="type-filter",
+                                    options=[
+                                        {"label": "All", "value": "all"},
+                                        {"label": "Movies", "value": "movie"},
+                                        {"label": "TV Series", "value": "tvSeries"},
+                                        {"label": "TV Episodes", "value": "tvEpisode"}
+                                    ],
+                                    value="all"
+                                )
+                            ], width=3),
+                            dbc.Col([
+                                dbc.Label("Year Range:", className="fw-bold"),
+                                dcc.RangeSlider(
+                                    id="year-range",
+                                    min=1900, max=2024, step=1,
+                                    value=[1990, 2024],
+                                    marks={i: str(i) for i in range(1900, 2025, 20)}
+                                )
+                            ], width=6),
+                            dbc.Col([
+                                dbc.Label("Min Rating:", className="fw-bold"),
+                                dcc.Slider(
+                                    id="rating-filter",
+                                    min=0, max=10, step=0.5,
+                                    value=0,
+                                    marks={i: str(i) for i in range(0, 11, 2)}
+                                )
+                            ], width=3)
+                        ])
+                    ])
+                ], className="search-container mb-4"),
                 
-                dbc.Row([
-                    dbc.Col([
-                        dbc.Label("Title Type:"),
-                        dcc.Dropdown(
-                            id="type-filter",
-                            options=[
-                                {"label": "All", "value": "all"},
-                                {"label": "Movies", "value": "movie"},
-                                {"label": "TV Series", "value": "tvSeries"},
-                                {"label": "TV Episodes", "value": "tvEpisode"}
-                            ],
-                            value="all"
-                        )
-                    ], width=3),
-                    dbc.Col([
-                        dbc.Label("Year Range:"),
-                        dcc.RangeSlider(
-                            id="year-range",
-                            min=1900, max=2024, step=1,
-                            value=[2000, 2024],
-                            marks={i: str(i) for i in range(1900, 2025, 20)}
-                        )
-                    ], width=6),
-                    dbc.Col([
-                        dbc.Label("Min Rating:"),
-                        dcc.Slider(
-                            id="rating-filter",
-                            min=0, max=10, step=0.1,
-                            value=0,
-                            marks={i: str(i) for i in range(0, 11, 2)}
-                        )
-                    ], width=3)
-                ], className="mb-3"),
-                
-                html.Div(id="search-results")
+                html.H4("🎬 Popular Movies & Search Results", className="mt-4 mb-3"),
+                dcc.Loading(
+                    id="loading-search",
+                    type="default",
+                    children=html.Div(id="search-results", className="dash-table-container")
+                )
             ])
         ])
-    ])
+    ], className="tab-content")
 
 def create_analytics_tab(imdb_clone):
     """Create analytics dashboard"""
-    # Get rating distribution
-    rating_query = """
-    SELECT 
-        CAST(averageRating as INTEGER) as rating_bucket,
-        COUNT(*) as count
-    FROM title_ratings 
-    WHERE averageRating IS NOT NULL
-    GROUP BY rating_bucket    ORDER BY rating_bucket
-    """
-    rating_df = pd.read_sql_query(rating_query, imdb_clone.conn)
-    
-    # Get genre popularity - SQLite compatible version
-    genre_query = """
-    SELECT 
-        'Drama' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Drama%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Comedy' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Comedy%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Action' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Action%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Romance' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Romance%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Thriller' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Thriller%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Horror' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Horror%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Sci-Fi' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Sci-Fi%' AND tr.numVotes >= 100
-    UNION ALL
-    SELECT 
-        'Documentary' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.genres LIKE '%Documentary%' AND tr.numVotes >= 100
-    ORDER BY count DESC
-    LIMIT 10
-    """
-    
-    genre_df = pd.read_sql_query(genre_query, imdb_clone.conn)
-    
-    # Create visualizations
-    rating_fig = px.bar(rating_df, x='rating_bucket', y='count', 
-                       title='Distribution of Movie Ratings',
-                       labels={'rating_bucket': 'Rating', 'count': 'Number of Titles'})
-    
-    genre_fig = px.bar(genre_df, x='genre', y='count',
-                      title='Most Popular Genres',
-                      labels={'genre': 'Genre', 'count': 'Number of Titles'})
-    genre_fig.update_xaxis(tickangle=45)
-    
-    return dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                html.H3("📊 Analytics Dashboard"),
-                dcc.Graph(figure=rating_fig)
-            ], width=6),
-            dbc.Col([
-                dcc.Graph(figure=genre_fig)
-            ], width=6)
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.H4("🏆 Top Rated Movies (Min 10k votes)"),
-                html.Div(id="top-movies-table")
-            ])
-        ], className="mt-4")
-    ])
+    try:
+        # Get rating distribution
+        rating_query = """
+        SELECT 
+            CAST(averageRating as INTEGER) as rating_bucket,
+            COUNT(*) as count
+        FROM title_ratings 
+        WHERE averageRating IS NOT NULL
+        GROUP BY rating_bucket
+        ORDER BY rating_bucket
+        """
+        rating_df = pd.read_sql_query(rating_query, imdb_clone.conn)
+        
+        # Get genre popularity - SQLite compatible version
+        genre_query = """
+        SELECT 
+            'Drama' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Drama%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Comedy' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Comedy%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Action' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Action%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Romance' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Romance%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Thriller' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Thriller%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Horror' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Horror%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Sci-Fi' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Sci-Fi%' AND tr.numVotes >= 100
+        UNION ALL
+        SELECT 
+            'Documentary' as genre, COUNT(*) as count, AVG(tr.averageRating) as avg_rating
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.genres LIKE '%Documentary%' AND tr.numVotes >= 100
+        ORDER BY count DESC
+        LIMIT 10
+        """
+        
+        genre_df = pd.read_sql_query(genre_query, imdb_clone.conn)
+        
+        # Get top rated movies
+        top_movies_query = """
+        SELECT 
+            tb.primaryTitle,
+            tb.startYear,
+            tr.averageRating,
+            tr.numVotes,
+            tb.genres
+        FROM title_basics tb
+        JOIN title_ratings tr ON tb.tconst = tr.tconst
+        WHERE tb.titleType = 'movie' 
+            AND tr.numVotes >= 10000
+        ORDER BY tr.averageRating DESC, tr.numVotes DESC
+        LIMIT 20
+        """
+        top_movies_df = pd.read_sql_query(top_movies_query, imdb_clone.conn)
+        
+        # Create visualizations
+        if not rating_df.empty:
+            rating_fig = px.bar(rating_df, x='rating_bucket', y='count', 
+                               title='Distribution of Movie Ratings',
+                               labels={'rating_bucket': 'Rating', 'count': 'Number of Titles'})
+            rating_fig.update_layout(xaxis_title="Rating", yaxis_title="Number of Titles")
+        else:
+            rating_fig = px.bar(title="No rating data available")
+        
+        if not genre_df.empty:
+            genre_fig = px.bar(genre_df, x='genre', y='count',
+                              title='Most Popular Genres',
+                              labels={'genre': 'Genre', 'count': 'Number of Titles'})
+            genre_fig.update_xaxis(tickangle=45)
+        else:
+            genre_fig = px.bar(title="No genre data available")
+        
+        # Create top movies table
+        if not top_movies_df.empty:
+            top_movies_table = dash_table.DataTable(
+                data=top_movies_df.to_dict('records'),
+                columns=[
+                    {"name": "Title", "id": "primaryTitle"},
+                    {"name": "Year", "id": "startYear"},
+                    {"name": "Rating", "id": "averageRating", "type": "numeric", "format": {"specifier": ".1f"}},
+                    {"name": "Votes", "id": "numVotes", "type": "numeric", "format": {"specifier": ","}},
+                    {"name": "Genres", "id": "genres"}
+                ],
+                style_table={'overflowX': 'auto'},
+                style_cell={'textAlign': 'left', 'padding': '10px'},
+                style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
+                page_size=10
+            )
+        else:
+            top_movies_table = dbc.Alert("No top rated movies found.", color="info")
+        
+        return dbc.Container([
+            dbc.Row([
+                dbc.Col([
+                    html.H3("📊 Analytics Dashboard"),
+                    dcc.Graph(figure=rating_fig)
+                ], width=6),
+                dbc.Col([
+                    dcc.Graph(figure=genre_fig)
+                ], width=6)
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.H4("🏆 Top Rated Movies (Min 10k votes)"),
+                    top_movies_table
+                ])
+            ], className="mt-4")
+        ])
+        
+    except Exception as e:
+        return dbc.Container([
+            dbc.Alert(f"Error loading analytics data: {str(e)}", color="danger"),
+            html.P("Please check that the database is properly loaded with data.")
+        ])
 
 def create_people_tab(imdb_clone):
     """Create people and careers analysis"""
-    return dbc.Container([
-        html.H3("🎭 People & Careers Analysis"),
-        html.P("Explore actors, directors, and other film industry professionals"),
+    try:
+        # This is a placeholder until the full feature is built
+        return dbc.Container([
+            html.H3("🎭 People & Careers"),
+            dbc.Alert("This section is under construction.", color="info", className="mt-3")
+        ], className="tab-content")
         
-        dbc.Row([
-            dbc.Col([
-                html.H4("Top Directors by Average Rating"),
-                html.Div(id="top-directors")
-            ], width=6),
-            dbc.Col([
-                html.H4("Most Active Actors"),
-                html.Div(id="top-actors")
-            ], width=6)
+    except Exception as e:
+        return dbc.Container([
+            dbc.Alert(f"Error loading people data: {str(e)}", color="danger")
         ])
-    ])
 
 def create_trends_tab(imdb_clone):
     """Create trends and insights analysis"""
-    # Movies by year
-    year_query = """
-    SELECT 
-        startYear,
-        COUNT(*) as movie_count,
-        AVG(tr.averageRating) as avg_rating
-    FROM title_basics tb
-    LEFT JOIN title_ratings tr ON tb.tconst = tr.tconst
-    WHERE tb.titleType = 'movie' 
-        AND tb.startYear BETWEEN 1950 AND 2023
-        AND tb.startYear IS NOT NULL
-    GROUP BY startYear
-    ORDER BY startYear
-    """
-    year_df = pd.read_sql_query(year_query, imdb_clone.conn)
-    
-    # Create trend visualization
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    
-    fig.add_trace(
-        go.Scatter(x=year_df['startYear'], y=year_df['movie_count'], 
-                  name="Movies Released", line=dict(color='blue')),
-        secondary_y=False,
-    )
-    
-    fig.add_trace(
-        go.Scatter(x=year_df['startYear'], y=year_df['avg_rating'], 
-                  name="Average Rating", line=dict(color='red')),
-        secondary_y=True,
-    )
-    
-    fig.update_xaxis(title_text="Year")
-    fig.update_yaxes(title_text="Number of Movies", secondary_y=False)
-    fig.update_yaxes(title_text="Average Rating", secondary_y=True)
-    fig.update_layout(title_text="Movie Industry Trends Over Time")
-    
-    return dbc.Container([
-        html.H3("📈 Trends & Insights"),
-        dcc.Graph(figure=fig),
+    try:
+        # This is a placeholder until the full feature is built
+        return dbc.Container([
+            html.H3("📈 Trends & Insights"),
+            dbc.Alert("This section is under construction.", color="info", className="mt-3")
+        ], className="tab-content")
         
-        dbc.Row([
-            dbc.Col([
-                html.H4("Key Insights"),
-                dbc.ListGroup([
-                    dbc.ListGroupItem("🎬 Golden Age of Cinema: 1940s-1960s show highest average ratings"),
-                    dbc.ListGroupItem("📈 Volume Explosion: Movie production peaked in recent decades"),
-                    dbc.ListGroupItem("⭐ Rating Inflation: Modern movies tend to have more polarized ratings"),
-                    dbc.ListGroupItem("🌍 Global Cinema: International productions increasing significantly")
-                ])
-            ])
-        ], className="mt-4")
-    ])
+    except Exception as e:
+        return dbc.Container([
+            dbc.Alert(f"Error loading trends data: {str(e)}", color="danger")
+        ])
 
 def main():
     """Main application entry point"""
