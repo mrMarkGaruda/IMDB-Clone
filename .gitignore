@@ -1,2 +1,5 @@
+imdb.db
+imdb.db-shm
+imdb.db-wal
 dataset/*
 !dataset/.gitkeep
