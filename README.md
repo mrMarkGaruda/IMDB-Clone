@@ -43,48 +43,50 @@ The database contains 7 main tables:
 
 See `schema/schema.sql` for complete table definitions and `schema/schema.png` for the visual diagram.
 
-## 🚀 Quick Start
+# If you want to run it on your own, the guide is below. (The code is on the `final` and `final_v1.2D` branches.
 
-### Prerequisites
-
-- Python 3.8+
-- SQLite 3
-- Flask and dependencies
-- ~15GB disk space for full dataset
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd imdb-clone
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Download IMDb datasets**
-   ```bash
-   # Download from https://datasets.imdbws.com/
-   mkdir dataset
-   # Download all .tsv.gz files to dataset/ folder
-   ```
-
-4. **Import data**
-   ```bash
-   python import_data.py
-   # This process takes 2-4 hours for full dataset
-   ```
-
-5. **Run the application**
-   ```bash
-   python app.py
-   ```
-
-6. **Access the application**
-   Open http://localhost:5000 in your browser
+      ## 🚀 Quick Start
+      
+      ### Prerequisites
+      
+      - Python 3.8+
+      - SQLite 3
+      - Flask and dependencies
+      - ~15GB disk space for full dataset
+      
+      ### Setup
+      
+      1. **Clone the repository**
+         ```bash
+         git clone <repository-url>
+         cd imdb-clone
+         ```
+      
+      2. **Install dependencies**
+         ```bash
+         pip install -r requirements.txt
+         ```
+      
+      3. **Download IMDb datasets**
+         ```bash
+         # Download from https://datasets.imdbws.com/
+         mkdir dataset
+         # Download all .tsv.gz files to dataset/ folder
+         ```
+      
+      4. **Import data**
+         ```bash
+         python import_data.py
+         # This process takes 2-4 hours for full dataset
+         ```
+      
+      5. **Run the application**
+         ```bash
+         python python simple_app.py
+         ```
+      
+      6. **Access the application**
+         Open http://localhost:5000 in your browser
 
 ## 📁 Project Structure
 
