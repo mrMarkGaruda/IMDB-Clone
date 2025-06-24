@@ -1,4 +1,0 @@
-assets/styles.css
-simple_app.py
-schema/
-tests/
