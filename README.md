@@ -1,3 +1,8 @@
+# Team Members
+
+- **Sayan DE**
+- **Abramenko Mark**
+
 # 🎬 IMDb Clone - Movie Database Project
 
 A comprehensive movie database application built using the official IMDb dataset, featuring a complete web interface for browsing movies, TV series, and people information.
