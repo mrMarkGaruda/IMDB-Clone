@@ -50,7 +50,7 @@ See `schema/schema.sql` for complete table definitions and `schema/schema.png` f
 - Python 3.8+
 - SQLite 3
 - Flask and dependencies
-- ~50GB disk space for full dataset
+- ~15GB disk space for full dataset
 
 ### Setup
 
@@ -134,7 +134,7 @@ project/
 
 ## 📈 Performance
 
-- **Database Size**: ~8GB (full IMDb dataset)
+- **Database Size**: ~8 (full IMDb dataset)
 - **Query Performance**: <100ms for most operations
 - **Concurrent Users**: 50+ simultaneous users supported
 - **Memory Usage**: ~200MB typical, ~500MB peak
