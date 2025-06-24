@@ -39,26 +39,6 @@
     </div>
 </div>
 
-<!-- Advanced Features and Queries -->
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>🔍 Advanced Analysis & Search</h5>
-            </div>
-            <div class="card-body">
-                <ul>
-                    <li><strong>Search by Actor:</strong> Find all movies and series for a given actor, including their roles and ratings.</li>
-                    <li><strong>Director Performance:</strong> Analyze top directors by average rating and output.</li>
-                    <li><strong>Collaboration Network:</strong> Discover actor pairs who frequently work together.</li>
-                    <li><strong>People Analysis:</strong> Explore filmographies, professions, and career trends.</li>
-                </ul>
-                <p>Use the <a href="{{ url_for('search') }}">Search</a> page to look up actors, directors, or movies by name.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Detailed Tables -->
 <div class="row mt-4">
     <div class="col-md-6">
@@ -124,9 +104,10 @@ const trendsCtx = document.getElementById('trendsChart').getContext('2d');
 new Chart(trendsCtx, {
     type: 'line',
     data: {
-        labels: {{ trends|map(attribute='startYear')|list|tojson }}, datasets: [{
+        labels: [{% for trend in trends %}'{{ trend.startYear }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
             label: 'Average Rating',
-            data: {{ trends|map(attribute='avg_rating')|list|tojson }},
+            data: [{% for trend in trends %}{{ trend.avg_rating }}{% if not loop.last %},{% endif %}{% endfor %}],
             borderColor: 'rgb(75, 192, 192)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
             tension: 0.1
@@ -151,9 +132,10 @@ const genresCtx = document.getElementById('genresChart').getContext('2d');
 new Chart(genresCtx, {
     type: 'bar',
     data: {
-        labels: {{ genres|map(attribute='genre')|list|tojson }}, datasets: [{
+        labels: [{% for genre in genres %}'{{ genre.genre }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
             label: 'Number of Movies',
-            data: {{ genres|map(attribute='count')|list|tojson }},
+            data: [{% for genre in genres %}{{ genre.count }}{% if not loop.last %},{% endif %}{% endfor %}],
             backgroundColor: [
                 'rgba(255, 99, 132, 0.8)',
                 'rgba(54, 162, 235, 0.8)',
