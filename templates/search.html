@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Search - IMDb Clone{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2>🔍 Search</h2>
+        
+        <form action="{{ url_for('search') }}" method="GET" class="mb-4">
+            <div class="input-group input-group-lg">
+                <input type="text" class="form-control" name="q" value="{{ query }}" 
+                       placeholder="Search for movies, TV shows, or people...">
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </form>
+        
+        {% if query %}
+            <h4>Search Results for "{{ query }}"</h4>
+            
+            {% if results %}
+                <div class="list-group">
+                    {% for result in results %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">
+                                    {% if result.result_type == 'person' %}
+                                        {{ result.primaryName }}
+                                        <span class="badge bg-info">Person</span>
+                                    {% else %}
+                                        <a href="{{ url_for('movie_details', tconst=result.tconst) }}" class="text-decoration-none">
+                                            {{ result.primaryTitle }}
+                                        </a>
+                                        <span class="badge bg-{% if result.titleType == 'movie' %}primary{% else %}success{% endif %}">
+                                            {{ result.titleType.replace('tv', 'TV ').title() }}
+                                        </span>
+                                    {% endif %}
+                                </h5>
+                                <small>
+                                    {% if result.result_type == 'person' %}
+                                        {% if result.birthYear %}{{ result.birthYear }}{% endif %}
+                                    {% else %}
+                                        {{ result.startYear or 'Unknown Year' }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <p class="mb-1">
+                                {% if result.result_type == 'person' %}
+                                    {{ result.primaryProfession or 'Unknown profession' }}
+                                {% else %}
+                                    {% if result.averageRating %}
+                                        ⭐ {{ "%.1f"|format(result.averageRating) }}/10
+                                        ({{ "{:,}".format(result.numVotes) }} votes)
+                                    {% else %}
+                                        Not rated
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <h4>No results found</h4>
+                    <p>Try searching with different keywords or check your spelling.</p>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
